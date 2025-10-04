@@ -1,9 +1,13 @@
 # CPU 8-Bit Compiler
 
-A TypeScript-based compiler for the custom 8-bit CPU assembly language. This tool compiles assembly code into binary machine code that can run on the 8-bit CPU hardware.
+A TypeScript-based compiler for the custom 8-bit CPU that supports multiple programming languages:
+- **Assembly**: Native assembly language for direct hardware control
+- **C-like**: High-level C-like syntax for easier programming
 
 ## Features
 
+- **Multi-Language Support**: Assembly and C-like syntax
+- **Transpilation Chain**: C-like → Assembly → Binary
 - **Custom Assembly Language**: Easy-to-learn syntax for 8-bit CPU programming
 - **Multiple Output Formats**: Binary (.bin) and Intel HEX (.hex) formats
 - **Comprehensive Instruction Set**: Data movement, arithmetic, logic, control flow, and I/O operations
@@ -17,6 +21,7 @@ A TypeScript-based compiler for the custom 8-bit CPU assembly language. This too
 ```bash
 npm install
 npm run build
+./install.sh  # Install globally
 ```
 
 ## Usage
@@ -24,33 +29,102 @@ npm run build
 ### Command Line Interface
 
 ```bash
-# Compile a single file
+# Compile assembly file
 cpu8bit compile program.s
 
-# Specify output directory and format
-cpu8bit compile program.s -o ./output -f both
+# Compile C-like file  
+cpu8bit compile program.c
 
-# Generate example programs
-cpu8bit example -o ./examples
+# Auto-detect language by extension
+cpu8bit compile program.c -o ./output -f both -v
+
+# Keep generated assembly file
+cpu8bit compile program.c -k
+
+# Generate examples for all languages
+cpu8bit example -l all -o ./examples
 ```
 
 ### Programmatic API
 
 ```typescript
-import { CPU8BitCompiler } from 'cpu8bit-compiler';
+import { CPU8BitCompiler, HighLevelCompiler } from 'cpu8bit-compiler';
 
-const compiler = new CPU8BitCompiler({
+// For assembly
+const assemblyCompiler = new CPU8BitCompiler({
   outputFormat: 'bin',
   verbose: true
 });
 
-const result = compiler.compile(sourceCode);
+// For high-level languages
+const cCompiler = new HighLevelCompiler({
+  language: 'c',
+  outputFormat: 'both',
+  keepAssembly: true
+});
+
+const result = cCompiler.compile(sourceCode);
 if (result.success) {
   console.log('Compilation successful!');
 } else {
   console.error('Errors:', result.errors);
 }
 ```
+
+## Language Support
+
+### 1. Assembly Language
+
+Native assembly with direct instruction mapping:
+
+```assembly
+; Hello World in Assembly
+.ORG 0x00
+
+MAIN:
+    LDI 72      ; Load 'H'
+    OUT 1       ; Output to port 1
+    LDI 101     ; Load 'e' 
+    OUT 1
+    HLT         ; Halt
+```
+
+### 2. C-like Language
+
+High-level C-like syntax with functions, variables, and control flow:
+
+```c
+// Hello World in C-like syntax
+void main() {
+    output(1, 72);   // 'H'
+    output(1, 101);  // 'e'
+    output(1, 108);  // 'l'
+    output(1, 108);  // 'l'
+    output(1, 111);  // 'o'
+    halt();
+}
+
+// Calculator with functions
+uint8 add(uint8 a, uint8 b) {
+    return a + b;
+}
+
+void main() {
+    uint8 x = 5;
+    uint8 y = 10;
+    uint8 result = add(x, y);
+    output(1, result);
+    halt();
+}
+```
+
+#### C-like Language Features:
+- **Data Types**: `uint8`, `int8`, `bool`, `void`
+- **Variables**: Declaration with initialization
+- **Functions**: Parameters, return values, local scope  
+- **Control Flow**: `if/else`, `while`, `for` loops
+- **Operators**: Arithmetic (`+`, `-`), logical (`&`, `|`, `^`, `!`), comparison (`==`, `!=`, `<`, `>`)
+- **Built-in Functions**: `input(port)`, `output(port, value)`, `halt()`, `delay(cycles)`
 
 ## Assembly Language Syntax
 

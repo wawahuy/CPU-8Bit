@@ -1,3 +1,9 @@
+/**
+ * Token classification for assembly language elements
+ * 
+ * Each token type represents a distinct lexical category that the parser
+ * can recognize and process appropriately.
+ */
 export enum TokenType {
   INSTRUCTION = 'INSTRUCTION',
   REGISTER = 'REGISTER',
@@ -19,6 +25,12 @@ export interface Token {
   column: number;
 }
 
+/**
+ * Finite state machine tokenizer for assembly language
+ * 
+ * Processes source code character by character, maintaining position tracking
+ * for accurate error reporting. Implements lookahead for multi-character tokens.
+ */
 export class Tokenizer {
   private source: string;
   private position: number = 0;
@@ -29,6 +41,14 @@ export class Tokenizer {
     this.source = source;
   }
 
+  /**
+   * Tokenizes the entire source code into a token stream
+   * 
+   * Uses a single-pass algorithm with character-by-character processing.
+   * Automatically appends EOF token to mark end of input.
+   * 
+   * @returns Array of tokens in source order, terminated with EOF
+   */
   tokenize(): Token[] {
     const tokens: Token[] = [];
     
@@ -138,6 +158,16 @@ export class Tokenizer {
     return this.createToken(TokenType.STRING, value);
   }
 
+  /**
+   * Parses numeric literals with multiple base support
+   * 
+   * Supported formats:
+   * - Decimal: 123, 255
+   * - Hexadecimal: 0xFF, 0x2A (case insensitive)
+   * - Binary: 0b11111111, 0b101010
+   * 
+   * @returns NUMBER token with the literal value
+   */
   private readNumber(): Token {
     const start = this.position;
     
@@ -169,6 +199,17 @@ export class Tokenizer {
     return this.createToken(TokenType.NUMBER, this.source.slice(start, this.position));
   }
 
+  /**
+   * Parses identifiers, keywords, and labels
+   * 
+   * Handles:
+   * - Instruction mnemonics (converted to uppercase)
+   * - Register names and variable identifiers
+   * - Assembler directives (prefixed with '.')
+   * - Labels (suffixed with ':')
+   * 
+   * @returns Appropriate token type based on content and context
+   */
   private readIdentifier(): Token {
     const start = this.position;
     

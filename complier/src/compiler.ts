@@ -1,3 +1,39 @@
+/**
+ * 8-Bit CPU Compiler - Main Entry Point
+ * 
+ * Central orchestration point for the complete compilation pipeline. This module
+ * coordinates all compilation phases from source analysis to binary generation.
+ * 
+ * Architecture Overview:
+ * ┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────────┐
+ * │ Source Code │ -> │ Tokenization │ -> │   Parsing   │ -> │ Code Generation│
+ * └─────────────┘    └──────────────┘    └─────────────┘    └──────────────┘
+ *                                                                    │
+ *                    ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
+ *                    │  Binary     │ <- │ Optimization │ <- │ Assembly Code   │
+ *                    │  Output     │    │  (Optional)  │    │ Generation      │
+ *                    └─────────────┘    └──────────────┘    └─────────────────┘
+ * 
+ * Supported Input Languages:
+ * - Assembly: Direct instruction mnemonics with labels and constants
+ * - C-like: High-level language with variables, functions, and control flow
+ * 
+ * Output Formats:
+ * - Binary (.bin): Raw machine code for direct CPU execution
+ * - Intel HEX (.hex): Industry-standard hex format for programmers
+ * - Memory Map (.map): Symbol and address mapping for debugging
+ * - Assembly (.s): Generated assembly code for inspection
+ * 
+ * Error Handling:
+ * - Comprehensive error reporting with source location tracking
+ * - Recovery strategies for continued compilation after errors
+ * - Detailed diagnostics for debugging compilation issues
+ * 
+ * @fileoverview Main compiler orchestration and public API
+ * @author CPU-8Bit Compiler Team
+ * @version 1.0.0
+ */
+
 import { Tokenizer } from './tokenizer';
 import { Parser } from './parser';
 import { generateBinary, CodeGenResult } from './code-generator';

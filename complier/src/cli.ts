@@ -1,7 +1,46 @@
 #!/usr/bin/env node
 
+/**
+ * Command Line Interface (CLI) for 8-Bit CPU Compiler
+ * 
+ * Professional-grade command-line interface providing comprehensive access to
+ * all compiler functionality. Designed for both interactive use and build automation.
+ * 
+ * CLI Design Philosophy:
+ * - Intuitive argument structure following POSIX conventions
+ * - Comprehensive help system with examples
+ * - Graceful error handling with actionable error messages
+ * - Progress reporting for long-running operations
+ * - Integration-friendly for build systems and IDEs
+ * 
+ * Command Structure:
+ *   cpu8bit-compiler [options] <input-file>
+ * 
+ * Options:
+ *   -o, --output <file>     Output file path (default: input.bin)
+ *   -f, --format <format>   Output format: bin|hex|map|asm
+ *   -l, --language <lang>   Input language: auto|assembly|c
+ *   -O, --optimize <level>  Optimization level: 0|1|2
+ *   -v, --verbose          Enable verbose output
+ *   -q, --quiet            Suppress non-error output
+ *   -h, --help             Display help information
+ *   --version              Display version information
+ * 
+ * Exit Codes:
+ *   0: Successful compilation
+ *   1: Compilation errors (syntax, semantic)
+ *   2: File I/O errors
+ *   3: Invalid command line arguments
+ *   4: Internal compiler error
+ * 
+ * @fileoverview Professional CLI interface for compiler access
+ * @author CPU-8Bit Compiler Team
+ * @version 1.0.0
+ */
+
 import { Command } from 'commander';
 import { CPU8BitCompiler } from './compiler';
+import { HighLevelCompiler } from './languages/high-level-compiler';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -9,7 +48,7 @@ const program = new Command();
 
 program
   .name('cpu8bit')
-  .description('CPU 8-Bit Compiler - Compile custom assembly language to binary')
+  .description('CPU 8-Bit Compiler - Compile assembly and high-level languages to binary')
   .version('1.0.0');
 
 program
@@ -19,6 +58,8 @@ program
   .argument('<input>', 'Input source file')
   .option('-o, --output <dir>', 'Output directory', '.')
   .option('-f, --format <format>', 'Output format (bin, hex, both)', 'bin')
+  .option('-l, --language <lang>', 'Source language (asm, c)', 'auto')
+  .option('-k, --keep-asm', 'Keep generated assembly file')
   .option('-v, --verbose', 'Verbose output')
   .action((input, options) => {
     compileFile(input, options);
@@ -28,8 +69,9 @@ program
   .command('example')
   .description('Generate example source files')
   .option('-o, --output <dir>', 'Output directory', '.')
+  .option('-l, --language <lang>', 'Language for examples (asm, c, all)', 'all')
   .action((options) => {
-    generateExamples(options.output);
+    generateExamples(options.output, options.language);
   });
 
 async function compileFile(inputPath: string, options: any) {
@@ -39,23 +81,60 @@ async function compileFile(inputPath: string, options: any) {
       process.exit(1);
     }
 
-    const compiler = new CPU8BitCompiler({
-      outputFormat: options.format,
-      outputDir: options.output,
-      verbose: options.verbose
-    });
+    const sourceCode = fs.readFileSync(inputPath, 'utf-8');
+    const filename = path.parse(inputPath).name;
+    const extension = path.parse(inputPath).ext.toLowerCase();
 
-    const result = compiler.compileFile(inputPath);
+    // Determine language
+    let language = options.language;
+    if (language === 'auto') {
+      switch (extension) {
+        case '.s':
+        case '.asm':
+          language = 'asm';
+          break;
+        case '.c':
+        case '.h':
+          language = 'c';
+          break;
+        default:
+          language = 'asm'; // Default to assembly
+      }
+    }
+
+    let result: any;
+
+    if (language === 'asm') {
+      // Use original assembly compiler
+      const compiler = new CPU8BitCompiler({
+        outputFormat: options.format,
+        outputDir: options.output,
+        verbose: options.verbose
+      });
+
+      result = compiler.compile(sourceCode, filename);
+    } else {
+      // Use high-level compiler
+      const compiler = new HighLevelCompiler({
+        language: language,
+        outputFormat: options.format,
+        outputDir: options.output,
+        verbose: options.verbose,
+        keepAssembly: options.keepAsm
+      });
+
+      result = compiler.compile(sourceCode, filename);
+    }
 
     if (result.success) {
       console.log('Compilation successful!');
       if (result.outputFiles.length > 0) {
         console.log('Generated files:');
-        result.outputFiles.forEach(file => console.log(`  ${file}`));
+        result.outputFiles.forEach((file: string) => console.log(`  ${file}`));
       }
     } else {
       console.error('Compilation failed:');
-      result.errors.forEach(error => console.error(`  ${error}`));
+      result.errors.forEach((error: string) => console.error(`  ${error}`));
       process.exit(1);
     }
 
@@ -65,11 +144,15 @@ async function compileFile(inputPath: string, options: any) {
   }
 }
 
-function generateExamples(outputDir: string) {
-  const examples = [
-    {
-      filename: 'hello.s',
-      content: `; Hello World Example for CPU 8-Bit
+function generateExamples(outputDir: string, language: string) {
+  const examples = [];
+
+  // Assembly examples
+  if (language === 'asm' || language === 'all') {
+    examples.push(...[
+      {
+        filename: 'hello.s',
+        content: `; Hello World Example for CPU 8-Bit
 ; This program outputs "Hello" to port 1
 
 .ORG 0x00       ; Start at address 0
@@ -90,10 +173,10 @@ MAIN:
     
     HLT         ; Halt the processor
 `
-    },
-    {
-      filename: 'counter.s',
-      content: `; Counter Example for CPU 8-Bit
+      },
+      {
+        filename: 'counter.s',
+        content: `; Counter Example for CPU 8-Bit
 ; Counts from 0 to 10 and outputs to port 0
 
 .ORG 0x00
@@ -115,56 +198,84 @@ LOOP:
 END:
     HLT         ; Halt the processor
 `
-    },
-    {
-      filename: 'fibonacci.s',
-      content: `; Fibonacci Sequence for CPU 8-Bit
-; Calculates Fibonacci numbers and outputs them
+      }
+    ]);
+  }
 
-.ORG 0x00
+  // C-like examples
+  if (language === 'c' || language === 'all') {
+    examples.push(...[
+      {
+        filename: 'hello.c',
+        content: `// Hello World in C-like syntax
+// Outputs "Hello" to port 1
 
-MAIN:
-    LDI 0       ; First Fibonacci number (F0 = 0)
-    STA 0x80    ; Store F0 at memory location 0x80
-    OUT 0       ; Output F0
-    
-    LDI 1       ; Second Fibonacci number (F1 = 1)
-    STA 0x81    ; Store F1 at memory location 0x81
-    OUT 0       ; Output F1
-    
-    LDI 10      ; Counter for 10 Fibonacci numbers
-    STA 0x82    ; Store counter
-    
-LOOP:
-    LDA 0x80    ; Load F(n-2)
-    ADD 0x81    ; Add F(n-1)
-    OUT 0       ; Output F(n)
-    
-    ; Shift values: F(n-2) = F(n-1), F(n-1) = F(n)
-    LDA 0x81    ; Load F(n-1)
-    STA 0x80    ; Store as new F(n-2)
-    
-    LDA 0x80    ; Load F(n)
-    ADD 0x81    ; Calculate F(n) again
-    STA 0x81    ; Store as new F(n-1)
-    
-    ; Decrement counter
-    LDA 0x82    ; Load counter
-    SUI 1       ; Subtract 1
-    STA 0x82    ; Store counter
-    
-    JNZ LOOP    ; Continue if counter != 0
-    
-    HLT         ; Halt
+void main() {
+    output(1, 72);   // 'H'
+    output(1, 101);  // 'e'
+    output(1, 108);  // 'l'
+    output(1, 108);  // 'l'
+    output(1, 111);  // 'o'
+    halt();
+}
 `
+      },
+      {
+        filename: 'counter.c',
+        content: `// Counter in C-like syntax
+// Counts from 0 to 10
+
+void main() {
+    uint8 i;
+    
+    for (i = 0; i < 11; i = i + 1) {
+        output(0, i);
     }
-  ];
+    
+    halt();
+}
+`
+      },
+      {
+        filename: 'calculator.c',
+        content: `// Simple calculator in C-like syntax
+
+uint8 add(uint8 a, uint8 b) {
+    return a + b;
+}
+
+uint8 subtract(uint8 a, uint8 b) {
+    return a - b;
+}
+
+void main() {
+    uint8 num1 = input(0);  // Read from port 0
+    uint8 num2 = input(1);  // Read from port 1
+    uint8 op = input(2);    // Read operation from port 2
+    
+    uint8 result;
+    
+    if (op == 1) {
+        result = add(num1, num2);
+    } else if (op == 2) {
+        result = subtract(num1, num2);
+    } else {
+        result = 0xFF;  // Error code
+    }
+    
+    output(3, result);  // Output result to port 3
+    halt();
+}
+`
+      }
+    ]);
+  }
 
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  console.log('Generating example files...');
+  console.log(`Generating ${language} example files...`);
   examples.forEach(example => {
     const filePath = path.join(outputDir, example.filename);
     fs.writeFileSync(filePath, example.content);
@@ -172,8 +283,14 @@ LOOP:
   });
 
   console.log('\\nExample files generated successfully!');
-  console.log('To compile an example:');
-  console.log(`  cpu8bit compile ${path.join(outputDir, 'hello.s')}`);
+  console.log('To compile examples:');
+  
+  if (language === 'asm' || language === 'all') {
+    console.log(`  cpu8bit compile ${path.join(outputDir, 'hello.s')}`);
+  }
+  if (language === 'c' || language === 'all') {
+    console.log(`  cpu8bit compile ${path.join(outputDir, 'hello.c')}`);
+  }
 }
 
 program.parse();

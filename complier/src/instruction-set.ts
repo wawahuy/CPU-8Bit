@@ -1,12 +1,41 @@
-// CPU 8-bit Instruction Set Architecture
+/**
+ * CPU 8-bit Instruction Set Architecture (ISA) Definition
+ * 
+ * Defines the complete instruction set for the custom 8-bit CPU including:
+ * - Instruction opcodes and operand specifications
+ * - Register definitions and addressing modes
+ * - Instruction categories: data movement, arithmetic, logical, control flow
+ * 
+ * @fileoverview ISA specification for CPU 8-bit architecture
+ * @version 1.0.0
+ */
+/**
+ * Represents a single CPU instruction with its encoding and metadata
+ */
 export interface Instruction {
+  /** Mnemonic name of the instruction */
   name: string;
+  /** 8-bit opcode value (0x00-0xFF) */
   opcode: number;
-  operands: number; // Number of operands (0, 1, or 2)
+  /** Number of operands this instruction expects (0-2) */
+  operands: number;
+  /** Human-readable description of instruction behavior */
   description: string;
 }
 
-// 8-bit CPU Instruction Set
+/**
+ * Complete instruction set for the 8-bit CPU
+ * 
+ * Opcode allocation:
+ * - 0x00: NOP
+ * - 0x10-0x1F: Data movement instructions
+ * - 0x20-0x2F: Arithmetic operations
+ * - 0x30-0x3F: Logical operations  
+ * - 0x40-0x4F: Control flow instructions
+ * - 0x50-0x5F: Stack operations
+ * - 0x60-0x6F: I/O operations
+ * - 0xFF: HALT
+ */
 export const INSTRUCTION_SET: Record<string, Instruction> = {
   // Data Movement
   'MOV': { name: 'MOV', opcode: 0x10, operands: 2, description: 'Move data from source to destination' },
@@ -51,7 +80,12 @@ export const INSTRUCTION_SET: Record<string, Instruction> = {
   'HLT': { name: 'HLT', opcode: 0xFF, operands: 0, description: 'Halt processor' },
 };
 
-// Registers
+/**
+ * CPU register definitions with their internal addresses
+ * 
+ * The CPU uses a register file with 4 addressable registers.
+ * Register allocation follows common CPU conventions.
+ */
 export const REGISTERS = {
   'A': 0x00,  // Accumulator
   'B': 0x01,  // General purpose register

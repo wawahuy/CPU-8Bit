@@ -1,12 +1,44 @@
+/**
+ * Code Generator for CPU 8-bit Assembly
+ * 
+ * Transforms parsed assembly AST into executable binary machine code.
+ * Implements a two-pass assembler:
+ * 
+ * Pass 1: Symbol resolution and address calculation
+ * - Resolves all label references to absolute addresses
+ * - Calculates instruction sizes for address mapping
+ * - Validates instruction operands and ranges
+ * 
+ * Pass 2: Code emission and binary generation
+ * - Generates final machine code bytes
+ * - Creates debugging information and memory map
+ * - Handles assembler directives (.ORG, .DB, .DW)
+ * 
+ * @fileoverview Binary code generation with symbol resolution
+ */
+
 import { ParseResult, ParsedInstruction, ParsedDirective } from './parser';
 import { INSTRUCTION_SET, REGISTERS } from './instruction-set';
 
+/**
+ * Result of code generation process
+ */
 export interface CodeGenResult {
+  /** Generated machine code as byte array */
   binary: Uint8Array;
-  map: Map<number, string>; // address -> source line info
+  /** Address-to-source mapping for debugging */
+  map: Map<number, string>;
+  /** Compilation errors encountered during generation */
   errors: string[];
 }
 
+/**
+ * Two-pass assembler code generator
+ * 
+ * Converts parsed assembly instructions into binary machine code.
+ * Maintains address tracking and symbol table for label resolution.
+ * Generates comprehensive debugging information.
+ */
 export class CodeGenerator {
   private result: ParseResult;
   private binary: number[] = [];

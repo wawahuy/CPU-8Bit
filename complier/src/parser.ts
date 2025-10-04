@@ -1,20 +1,55 @@
+/**
+ * Recursive Descent Parser for CPU 8-bit Assembly Language
+ * 
+ * Implements a top-down parser that builds an Abstract Syntax Tree (AST)
+ * from the token stream. Features:
+ * - Syntax error recovery with synchronization
+ * - Two-pass parsing for forward label references
+ * - Address calculation for instruction sizing
+ * - Comprehensive error reporting with line numbers
+ * 
+ * Grammar:
+ * Program ::= Statement*
+ * Statement ::= Label | Directive | Instruction | Comment
+ * Instruction ::= Mnemonic Operand* 
+ * 
+ * @fileoverview Assembly language parser with error recovery
+ */
+
 import { Token, TokenType } from './tokenizer';
 import { INSTRUCTION_SET, REGISTERS } from './instruction-set';
 
+/**
+ * Parsed instruction with resolved operands
+ */
 export interface ParsedInstruction {
+  /** Instruction mnemonic (e.g., 'LDA', 'JMP') */
   instruction: string;
+  /** Operand values: immediates (numbers) or symbol references (strings) */
   operands: (string | number)[];
+  /** Source line number for error reporting */
   line: number;
 }
 
+/**
+ * Label definition with its target address
+ */
 export interface ParsedLabel {
+  /** Label identifier */
   name: string;
+  /** Source line number where label is defined */
   line: number;
 }
 
+/**
+ * Assembler directive with its argument
+ */
 export interface ParsedDirective {
+  /** Directive name (e.g., '.ORG', '.DB') */
   directive: string;
+  /** Directive argument (address, data value, etc.) */
   value: string | number;
+  /** Source line number for error reporting */
   line: number;
 }
 
@@ -25,6 +60,12 @@ export interface ParseResult {
   errors: string[];
 }
 
+/**
+ * Recursive descent parser with error recovery
+ * 
+ * Maintains parsing state including current position and address tracking.
+ * Implements panic-mode error recovery by synchronizing on statement boundaries.
+ */
 export class Parser {
   private tokens: Token[];
   private position: number = 0;
